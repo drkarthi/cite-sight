@@ -13,7 +13,7 @@ def compute_jaccard_index(s1, s2):
 	jaccard = float(a)/float(b)		
 	return jaccard
 
-def compute_author_similarity(current_paper_id):
+def get_current_paper_authors(current_paper_id):	
 	fo = open('acl-metadata.txt')
 	papers = fo.read().split('\n\n')[:-1] 	# to ignore the last blank element
 	for paper in papers:
@@ -22,25 +22,29 @@ def compute_author_similarity(current_paper_id):
 		if(paper_id == current_paper_id):
 			current_paper_authors = get_authors(info[1])			
 	print current_paper_authors
-	
+	return current_paper_authors
+
+def compute_author_similarity(current_paper_id):
+	current_paper_authors = get_current_paper_authors(current_paper_id)	
 	jaccard_index = {}
+
+	fo = open('acl-metadata.txt')
+	papers = fo.read().split('\n\n')[:-1] 	# to ignore the last blank element
 	for paper in papers:
 		info = paper.split('\n')
 		paper_id = get_id(info[0])
 		paper_authors = get_authors(info[1])
 		jaccard_index[paper_id] = compute_jaccard_index(current_paper_authors, paper_authors)
-		count += 1
-
 	fo = open('author_similarity.txt', 'w')
 	for key,val in jaccard_index.items():
 		fo.write( key+'\t'+str(val)+'\n' )	
 	fo.close()
 
 def compute_author_history(current_paper_id):
-	
+	current_paper_authors = get_current_paper_authors(current_paper_id)
 
 if __name__=='__main__':
-	current_paper_id = sys.argv[1]
+	current_paper_id = 'D10-1001'
 	compute_author_similarity(current_paper_id)
 
 	
