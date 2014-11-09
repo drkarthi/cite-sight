@@ -28,8 +28,20 @@ def get_paper_authors(current_paper_id):
 	# print current_paper_authors
 	return current_paper_authors
 
-def compute_author_similarity(current_paper_id):
-	current_paper_authors = get_paper_authors(current_paper_id)	
+# supplementary function
+def make_paper_author_dict():
+	paper_authors_dict = {}
+	fo = open('acl-metadata.txt')
+	papers = fo.read().split('\n\n')[:-1] 	# to ignore the last blank element
+	for paper in papers:
+		info = paper.split('\n') 			# has an extra blank element at the end
+		paper_id = get_id(info[0])
+		paper_authors_dict[paper_id] = get_authors(info[1])
+	return paper_authors_dict	
+
+def compute_author_similarity(author_dict, current_paper_id):
+	# current_paper_authors = get_paper_authors(current_paper_id)	
+	current_paper_authors = author_dict[current_paper_id]
 	jaccard_index = {}
 
 	fo = open('acl-metadata.txt')
@@ -55,8 +67,9 @@ def papers_citing(paper_id):
 			citers.append(papers[0])
 	return citers			
 
-def compute_author_history(current_paper_id):
-	current_paper_authors = get_paper_authors(current_paper_id)
+def compute_author_history(author_dict, current_paper_id):
+	# current_paper_authors = get_paper_authors(current_paper_id)
+	current_paper_authors = author_dict[current_paper_id]
 	author_history = {}
 
 	fo = open('acl-metadata.txt')
@@ -66,23 +79,33 @@ def compute_author_history(current_paper_id):
 		info = paper.split('\n')
 		paper_id = get_id(info[0])
 		citers = papers_citing(paper_id)
-		for paper_2 in papers: 								# TODO: make a binary search of ids
-			info_2 = paper_2.split('\n')
-			paper_id_2 = get_id(info_2[0])
-			if(paper_id_2 in citers and paper_id_2!=paper_id):
-				citer_authors = get_paper_authors(paper_id_2)
-				common_authors_sum += len( set(current_paper_authors).intersection(set(citer_authors)) )
+#		for paper_2 in papers: 								
+#			info_2 = paper_2.split('\n')
+#			paper_id_2 = get_id(info_2[0])
+#			if(paper_id_2 in citers and paper_id_2!=paper_id):
+#				citer_authors = get_paper_authors(paper_id_2)
+#				common_authors_sum += len( set(current_paper_authors).intersection(set(citer_authors)) )
+		for citer in citers:
+			if citer in author_dict.keys():
+				citer_authors = author_dict[citer]
+			else:
+				citer_authors = []
+			common_authors_sum += len( set(current_paper_authors).intersection(set(citer_authors)) )
 		print "Number of common authors for "+paper_id+" = ",common_authors_sum		
 		author_history[paper_id] = float(common_authors_sum)/len(current_paper_authors)
 	print author_history
 
-	fo = open('author_history.txt', 'w')
+	fo = open('author_history_2.txt', 'w')
 	for key,val in author_history.items():
 		fo.write( key+'\t'+str(val)+'\n' )
-	fo.close()	
-	return author_history			
+	fo.close()
+
+def compute_venue_relevancy(current_paper_id):
+
 
 if __name__=='__main__':
 	current_paper_id = 'D10-1001'
-	compute_author_similarity(current_paper_id)
-	compute_author_history(current_paper_id)
+	author_dict = make_paper_author_dict()
+	venue_dict = make_paper_
+	compute_author_similarity(author_dict, current_paper_id)
+	compute_author_history(author_dict, current_paper_id)
