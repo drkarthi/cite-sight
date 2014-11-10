@@ -10,6 +10,10 @@ def get_authors(author_string):
 	return set( author_string[10:-1].split('; ') )
 
 # supplementary function
+def get_venue(venue_string):
+	return venue_string[9:-1]	
+
+# supplementary function
 def compute_jaccard_index(s1, s2):
 	a = len( s1.intersection(s2) )
 	b = len( s1.union(s2) )
@@ -17,30 +21,23 @@ def compute_jaccard_index(s1, s2):
 	return jaccard
 
 # supplementary function
-def get_paper_authors(current_paper_id):	
-	fo = open('acl-metadata.txt')
-	papers = fo.read().split('\n\n')[:-1] 	# to ignore the last blank element
-	for paper in papers:
-		info = paper.split('\n') 			# has an extra blank element at the end
-		paper_id = get_id(info[0])
-		if(paper_id == current_paper_id):
-			current_paper_authors = get_authors(info[1])			
-	# print current_paper_authors
-	return current_paper_authors
-
-# supplementary function
-def make_paper_author_dict():
+def make_dicts():
 	paper_authors_dict = {}
+	paper_venue_dict = {}
+	venue_venue_dict = {}
 	fo = open('acl-metadata.txt')
 	papers = fo.read().split('\n\n')[:-1] 	# to ignore the last blank element
 	for paper in papers:
 		info = paper.split('\n') 			# has an extra blank element at the end
 		paper_id = get_id(info[0])
 		paper_authors_dict[paper_id] = get_authors(info[1])
-	return paper_authors_dict	
+		venue = get_venue(info[3])
+		paper_venue_dict[paper_id] = venue
+		venue_venue_dict[venue] = {}
+	print venue_venue_dict	
+	return paper_authors_dict, paper_venue_dict, venue_venue_dict	
 
-def compute_author_similarity(author_dict, current_paper_id):
-	# current_paper_authors = get_paper_authors(current_paper_id)	
+def compute_author_similarity(author_dict, current_paper_id):	
 	current_paper_authors = author_dict[current_paper_id]
 	jaccard_index = {}
 
@@ -68,7 +65,6 @@ def papers_citing(paper_id):
 	return citers			
 
 def compute_author_history(author_dict, current_paper_id):
-	# current_paper_authors = get_paper_authors(current_paper_id)
 	current_paper_authors = author_dict[current_paper_id]
 	author_history = {}
 
@@ -79,12 +75,6 @@ def compute_author_history(author_dict, current_paper_id):
 		info = paper.split('\n')
 		paper_id = get_id(info[0])
 		citers = papers_citing(paper_id)
-#		for paper_2 in papers: 								
-#			info_2 = paper_2.split('\n')
-#			paper_id_2 = get_id(info_2[0])
-#			if(paper_id_2 in citers and paper_id_2!=paper_id):
-#				citer_authors = get_paper_authors(paper_id_2)
-#				common_authors_sum += len( set(current_paper_authors).intersection(set(citer_authors)) )
 		for citer in citers:
 			if citer in author_dict.keys():
 				citer_authors = author_dict[citer]
@@ -95,17 +85,54 @@ def compute_author_history(author_dict, current_paper_id):
 		author_history[paper_id] = float(common_authors_sum)/len(current_paper_authors)
 	print author_history
 
-	fo = open('author_history_2.txt', 'w')
+	fo = open('author_history.txt', 'w')
 	for key,val in author_history.items():
 		fo.write( key+'\t'+str(val)+'\n' )
 	fo.close()
 
-def compute_venue_relevancy(current_paper_id):
+def compute_venue_relevancy(paper_venue_dict, venue_venue_dict, current_paper_id):
+	current_venue = paper_venue_dict[current_paper_id]
+	venue_relevancy = {}
+	print "Current venue = ", current_venue
+
+	fo = open('acl-metadata.txt')
+	papers = fo.read().split('\n\n')[:-1]
+	for paper in papers:
+		info = paper.split('\n')
+		paper_id = get_id(info[0])
+		venue2 = paper_venue_dict[paper_id]
+		citers = papers_citing(paper_id)
+		for citer in citers:
+			if citer in paper_venue_dict.keys():
+				venue1 = paper_venue_dict[citer]
+			else:
+				venue1 = ""
+			if venue1 == current_venue:
+				if paper_id[:3] == 'P11':
+					print "Venue same for ", citer
+				if venue2 in venue_venue_dict[venue1].keys():	
+					venue_venue_dict[venue1][venue2] += 1
+				else:
+					venue_venue_dict[venue1][venue2] = 1
+
+	for paper in papers:
+		info = paper.split('\n')
+		paper_id = get_id(info[0])
+		candidate_venue = paper_venue_dict[paper_id]
+		if candidate_venue in venue_venue_dict[current_venue].keys():
+			venue_relevancy[paper_id] = venue_venue_dict[current_venue][candidate_venue]
+		else:
+			venue_relevancy[paper_id] = 0
+
+	fo = open('venue_relevancy.txt', 'w')
+	for key,val in venue_relevancy.items():
+		fo.write( key+'\t'+str(val)+'\n' )
+	fo.close()					
 
 
 if __name__=='__main__':
 	current_paper_id = 'D10-1001'
-	author_dict = make_paper_author_dict()
-	venue_dict = make_paper_
-	compute_author_similarity(author_dict, current_paper_id)
-	compute_author_history(author_dict, current_paper_id)
+	paper_author_dict, paper_venue_dict, venue_venue_dict = make_dicts()
+#	compute_author_similarity(paper_author_dict, current_paper_id)
+#	compute_author_history(paper_author_dict, current_paper_id)
+	compute_venue_relevancy(paper_venue_dict, venue_venue_dict, current_paper_id)
